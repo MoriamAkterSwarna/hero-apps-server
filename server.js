@@ -42,9 +42,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Something went wrong!" });
 });
 
-// Start server
+// Connect to DB on first request (for serverless)
+let dbConnected = false;
+app.use(async (req, res, next) => {
+  if (!dbConnected) {
+    await connectDB();
+    dbConnected = true;
+  }
+  next();
+});
+
+// Start server (for local development)
 const startServer = async () => {
   await connectDB();
+  dbConnected = true;
 
   // Create uploads directory if it doesn't exist
   const fs = require("fs");
@@ -58,4 +69,10 @@ const startServer = async () => {
   });
 };
 
-startServer();
+// Only start server locally (not on Vercel)
+if (process.env.VERCEL !== "1") {
+  startServer();
+}
+
+// Export for Vercel serverless
+module.exports = app;
